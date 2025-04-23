@@ -16,7 +16,13 @@ from typing import Annotated
 
 DATABASE = 'data/db.db'
 
-app = FastAPI()
+app = FastAPI(
+    title='Punchcard',
+    version='0.0.1',
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 security = HTTPBasic()
 
 templates = Jinja2Templates(directory="templates")
@@ -117,8 +123,8 @@ class Punchcard:
 
 
 def auth(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    u = os.environ.get('USERNAME')
-    p = os.environ.get('PASSWORD')
+    u = os.environ.get('PUNCHCARD_USERNAME')
+    p = os.environ.get('PUNCHCARD_PASSWORD')
     if not u and not p:
         return True
     username_good = secrets.compare_digest(credentials.username, u)
