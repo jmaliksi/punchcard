@@ -1,12 +1,15 @@
 import calendar
 import itertools
 import json
+import secrets
 import sqlite3
+import os
 import uuid
 from contextlib import contextmanager
 from datetime import date
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request, HTTPException, status
 from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import Annotated
@@ -14,6 +17,7 @@ from typing import Annotated
 DATABASE = 'data/db.db'
 
 app = FastAPI()
+security = HTTPBasic()
 
 templates = Jinja2Templates(directory="templates")
 
@@ -34,7 +38,6 @@ def db():
 
 def bootstrap_db():
     with db() as conn:
-        conn.execute('DROP TABLE punchcards')
         conn.execute('CREATE TABLE punchcards (id TEXT PRIMARY KEY, year INTEGER NOT NULL, label TEXT, punches TEXT)')
 
 
@@ -113,8 +116,24 @@ class Punchcard:
         }
 
 
+def auth(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    u = os.environ.get('USERNAME')
+    p = os.environ.get('PASSWORD')
+    if not u and not p:
+        return True
+    username_good = secrets.compare_digest(credentials.username, u)
+    pw_good = secrets.compare_digest(credentials.password, p)
+    if not (username_good and pw_good):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="bluh",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
+
+
 @app.get('/punchcard', response_class=HTMLResponse)
-async def get_punchcard(request: Request, year: int = -1):
+async def get_punchcard(request: Request, authed: Annotated[bool, Depends(auth)], year: int = -1):
     context = {
         "year": year,
         "years": [],
@@ -126,8 +145,9 @@ async def get_punchcard(request: Request, year: int = -1):
     }
     with db() as conn:
         context['years'] = [row['year'] for row in conn.execute('SELECT distinct(year) FROM punchcards ORDER BY year DESC')]
-        if year:
-            context['punchcards'] = [Punchcard.load_json(row['punches']).to_template_var() for row in conn.execute('SELECT * FROM punchcards WHERE year=? ORDER BY label', (year,))]
+        if year == -1 and context['years']:
+            year = context['years'][0]
+        context['punchcards'] = [Punchcard.load_json(row['punches']).to_template_var() for row in conn.execute('SELECT * FROM punchcards WHERE year=? ORDER BY label', (year,))]
     return templates.TemplateResponse(
         request=request,
         name='punchcard.html',
@@ -142,7 +162,7 @@ class PunchBody(BaseModel):
 
 
 @app.put('/punchcard/{id}/punch')
-async def punch_punchcard(id: str, punch: PunchBody):
+async def punch_punchcard(id: str, punch: PunchBody, authed: Annotated[bool, Depends(auth)]):
     punchcard = Punchcard.get_db(id)
     punchcard.punch(punch.month, punch.day, punch.punch)
     punchcard.save()
@@ -155,14 +175,14 @@ class NewPunchcard(BaseModel):
 
 
 @app.post('/punchcard')
-async def create_punchcard(punchcard: NewPunchcard):
+async def create_punchcard(punchcard: NewPunchcard, authed: Annotated[bool, Depends(auth)]):
     pc = Punchcard(punchcard.year, punchcard.label)
     pc.save()
     return {}
 
 
 if __name__ == "__main__":
-    bootstrap_db()
-    pc = Punchcard(2024, label='bluh')
-    pc.punch(2, 5)
-    pc.save()
+    try:
+        bootstrap_db()
+    except Exception:
+        pass
