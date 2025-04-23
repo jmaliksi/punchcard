@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="robots" content="index, nofollow">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <meta charset="UTF-8">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Aubrey&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+        <script>
+            function punch(element, url, month, date) {
+                const punch = !element.classList.contains('punched');
+                fetch(url, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        month: month,
+                        day: date,
+                        punch: punch
+                    }),
+                    headers: {'Content-type': 'application/json'}
+                }).then(() => {
+                    element.classList.toggle('punched');
+                })
+            }
+
+            function changeYear(year) {
+                if (year === "new") {
+                    const y = prompt("What year is this card for?");
+                    const l = prompt("What is this card called?");
+                    if (confirm(`Create new card ${y}: "${l}"?`)) {
+                        fetch(`{{url_for("create_punchcard")}}`, {
+                            method: 'POST',
+                            headers: {'Content-type': 'application/json'},
+                            body: JSON.stringify({
+                                year: y,
+                                label: l
+                            })
+                        }).then(() => {
+                            window.location.replace(`{{url_for("get_punchcard")}}` + `?year=${y}`);
+                        })
+                    }
+                    return;
+                }
+                window.location.replace(`{{url_for("get_punchcard")}}` + `?year=${year}`);
+            }
+        </script>
+        <style>
+            html {
+                background-color: #24273a;
+                color: #a5adcb;
+            }
+            .aubrey {
+                font-family: "Aubrey", system-ui;
+                font-weight: 400;
+                font-style: normal;
+            }
+            .caveat {
+                font-family: "Caveat", cursive;
+                font-optical-sizing: auto;
+                font-style: normal;
+            }
+            .punchgrid {
+                display: inline-grid;
+                grid-template-columns: auto auto auto auto auto auto auto auto auto auto auto auto;
+            }
+            .punchgrid > div {
+                width: 25px;
+                height: 25px;
+            }
+            .day {
+                border: 1px solid #cad3f5;
+                margin: 2px;
+                border-radius:10px;
+
+                text-align: center;
+                vertical-align: middle;
+                line-height: 25px;
+            }
+            .today {
+                border: 2px solid #f0c6c6;
+                color: #f5bde6;
+                margin: 1px;
+            }
+            .punched {
+                background-color: #b7bdf8;
+                color: #494d64;
+            }
+            .monthHeader {
+                text-align: center;
+            }
+            .punchcard {
+                display: inline-block;
+                margin: 1em;
+            }
+            select {
+                margin-left: 1em;
+                padding-left: .5em;
+                padding-right: .5em;
+                font-family: "Aubrey", system-ui;
+                font-style: normal;
+                font-weight: 400;
+                font-size: 1.5em;
+            }
+            @media only screen and (max-width: 390px) {
+                .punchcard {
+                    margin: 0;
+                }
+                select {
+                    margin-left: 0;
+                }
+            }
+
+        </style>
+    </head>
+    <body>
+        <select id="yearPicker" onchange="changeYear(this.value)">
+            {% for y in years %}
+                <option value={{y}} {{"selected" if y == year else ""}}>{{y}}</option>
+            {% endfor %}
+            <option value="new">New Punchcard</option>
+        </select>
+        <div>
+            {% for punchcard in punchcards %}
+                <div class="punchcard">
+                    <h1 class="caveat">{{punchcard.label}}</h2>
+                    <div class="punchgrid">
+                        {% for header in punchcard.punches[0] %}
+                        <div class="aubrey monthHeader">{{header}}</div>
+                        {% endfor %}
+                        {% for days in punchcard.punches[1:] %}
+                            {% for day in days %}
+                                {% if day[0] != -1 %}
+                                    <div
+                                        class='aubrey day {{"punched" if day[1] else ""}} {{"today" if loop.index == today.month and day[0] == today.date else ""}}'
+                                        onclick='punch(this, "{{url_for("punch_punchcard", id=punchcard.id)}}", {{loop.index}}, {{day[0]}})'
+                                            >{{day[0]}}</div>
+                                {% else %}
+                                    <div></div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </body>
+</html>
