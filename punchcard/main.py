@@ -235,5 +235,5 @@ def robots():
 if __name__ == "__main__":
     try:
         bootstrap_db()
-    except Exception:
-        pass
+    except Exception as e:
+        print(e)
