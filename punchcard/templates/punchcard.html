@@ -44,11 +44,57 @@
                 }
                 window.location.replace(`{{url_for("get_punchcard")}}` + `?year=${year}`);
             }
+
+            function updateLabel(e, url, original) {
+                e.preventDefault();
+                const form = new FormData(e.target);
+                const data = Object.fromEntries(form.entries());
+
+                if (original === data.label) {
+                    document.activeElement.blur();
+                    return;
+                }
+                fetch(url, {
+                    method: 'PUT',
+                    headers: {'Content-type': 'application/json'},
+                    body: JSON.stringify({
+                        'label': data.label,
+                    }),
+                }).then(() => {
+                    document.activeElement.blur();
+                });
+            }
+
+            function deletePunchcard(e, url, name) {
+                e.preventDefault();
+                if (confirm(`Delete punchcard "${name}"?`)) {
+                    fetch(url, {
+                        method: 'DELETE',
+                        headers: {'Content-type': 'application/json'},
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                }
+            }
         </script>
         <style>
+            :root {
+                --base: #24273a;
+                --text: #cad3f5;
+                --subtext1: #b8c0e0;
+                --rosewater: #f4dbd6;
+                --overlay2: #939ab7;
+                --overlay1: #8087a2;
+                --crust: #181926;
+                --lavender: #b7bdf8;
+                --sapphire: #7dc4e4;
+                --mauve: #c6a0f6;
+                --teal: #8bd5ca;
+                --surface1: #494d64;
+            }
             html {
-                background-color: #24273a;
-                color: #a5adcb;
+                background-color: var(--base);
+                color: var(--text);
             }
             .aubrey {
                 font-family: "Aubrey", system-ui;
@@ -69,22 +115,24 @@
                 height: 25px;
             }
             .day {
-                border: 1px solid #cad3f5;
+                border: 1px solid var(--text);
                 margin: 2px;
                 border-radius:10px;
+                color: var(--overlay1);
 
                 text-align: center;
                 vertical-align: middle;
                 line-height: 25px;
             }
             .today {
-                border: 2px solid #f0c6c6;
+                border: 2px solid var(--rosewater);
                 color: #f5bde6;
                 margin: 1px;
             }
             .punched {
-                background-color: #b7bdf8;
-                color: #494d64;
+                background-color: var(--teal);
+                color: var(--surface1);
+                border: 1px solid var(--teal);
             }
             .monthHeader {
                 text-align: center;
@@ -92,6 +140,24 @@
             .punchcard {
                 display: inline-block;
                 margin: 1em;
+            }
+            .headerInput {
+                color: var(--mauve);
+                font-size: 2em;
+                font-weight: bold;
+                border: none;
+                outline: none;
+                background: transparent;
+                padding: 0;
+            }
+            .headerInput:focus {
+                background-color: var(--surface1);
+            }
+            .headerButtons {
+                visibility: hidden;
+            }
+            .headerForm:focus-within .headerButtons {
+                visibility: visible;
             }
             select {
                 margin-left: 1em;
@@ -123,7 +189,15 @@
         <div>
             {% for punchcard in punchcards %}
                 <div class="punchcard">
-                    <h1 class="caveat">{{punchcard.label}}</h2>
+                    <form onsubmit='return updateLabel(event, "{{url_for("update_punchcard", id=punchcard.id)}}", "{{punchcard.label}}")' class="headerForm" autocomplete="off">
+                        <input type="hidden" name="punchcardId" value="{{punchcard.id}}" />
+                        <input type="text" class="caveat headerInput" value="{{punchcard.label}}" name="label" />
+                        <div class="headerButtons">
+                            <button class="headerFormButton" type="submit" name="action" value="Update">Update</button>
+                            <input class="headerFormButton" type="reset" name="action" value="Cancel" onclick="document.activeElement.blur()" />
+                            <input class="headerFormButton" type="button" name="action" value="Delete" onclick='deletePunchcard(event, "{{url_for("delete_punchcard", id=punchcard.id)}}", "{{punchcard.label}}")'/>
+                        </div>
+                    </form>
                     <div class="punchgrid">
                         {% for header in punchcard.punches[0] %}
                         <div class="aubrey monthHeader">{{header}}</div>

@@ -8,11 +8,14 @@ import uuid
 from contextlib import contextmanager
 from datetime import date
 from fastapi import Depends, FastAPI, Request, HTTPException, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import Annotated
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from typing import Annotated, Optional
+
 
 DATABASE = 'data/db.db'
 
@@ -24,6 +27,13 @@ app = FastAPI(
     redoc_url=None,
 )
 security = HTTPBasic()
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=['1/second'],
+)
+app.state.limiter = limiter
+app.add_exception_handler(429, _rate_limit_exceeded_handler)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -138,6 +148,11 @@ def auth(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     return True
 
 
+@app.get('/')
+async def index():
+    return RedirectResponse(url='/punchcard', status_code=302)
+
+
 @app.get('/punchcard', response_class=HTMLResponse)
 async def get_punchcard(request: Request, authed: Annotated[bool, Depends(auth)], year: int = -1):
     context = {
@@ -168,11 +183,12 @@ class PunchBody(BaseModel):
 
 
 @app.put('/punchcard/{id}/punch')
-async def punch_punchcard(id: str, punch: PunchBody, authed: Annotated[bool, Depends(auth)]):
+@limiter.limit("10/second")
+async def punch_punchcard(request: Request, id: str, punch: PunchBody, authed: Annotated[bool, Depends(auth)]):
     punchcard = Punchcard.get_db(id)
     punchcard.punch(punch.month, punch.day, punch.punch)
     punchcard.save()
-    return {}
+    return {'ok': True}
 
 
 class NewPunchcard(BaseModel):
@@ -184,7 +200,36 @@ class NewPunchcard(BaseModel):
 async def create_punchcard(punchcard: NewPunchcard, authed: Annotated[bool, Depends(auth)]):
     pc = Punchcard(punchcard.year, punchcard.label)
     pc.save()
-    return {}
+    return {'ok': True}
+
+
+@app.delete('/punchcard/{id}')
+async def delete_punchcard(id: str, authed: Annotated[bool, Depends(auth)]):
+    with db() as conn:
+        conn.execute('DELETE FROM punchcards WHERE id=?', (id, ))
+    return {'ok': True}
+
+
+class UpdatePunchcard(BaseModel):
+    year: Optional[int] = None
+    label: Optional[str] = None
+
+
+@app.put('/punchcard/{id}')
+async def update_punchcard(id: str, authed: Annotated[bool, Depends(auth)], update: UpdatePunchcard):
+    # crud more like piece of crud amirite
+    pc = Punchcard.get_db(id)
+    if update.year is not None:
+        pc._year = update.year
+    if update.label is not None:
+        pc._label = update.label
+    pc.save()
+    return {'ok': True}
+
+
+@app.get('/robots.txt', response_class=PlainTextResponse)
+def robots():
+    return "User-agent: *\nDisallow: /"
 
 
 if __name__ == "__main__":
