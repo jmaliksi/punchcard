@@ -7,7 +7,7 @@
         <title>Punchcard</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Aubrey&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Aubrey&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
         <script>
             function punch(element, url, month, date) {
                 const punch = !element.classList.contains('punched');
@@ -21,13 +21,20 @@
                     headers: {'Content-type': 'application/json'}
                 }).then(() => {
                     element.classList.toggle('punched');
+                    element.classList.toggle('unpunched');
                 })
             }
 
             function changeYear(year) {
                 if (year === "new") {
                     const y = prompt("What year is this card for?");
+                    if (!y) {
+                        return;
+                    }
                     const l = prompt("What is this card called?");
+                    if (!l) {
+                        return;
+                    }
                     if (confirm(`Create new card ${y}: "${l}"?`)) {
                         fetch(`{{url_for("create_punchcard")}}`, {
                             method: 'POST',
@@ -91,15 +98,12 @@
                 --mauve: #c6a0f6;
                 --teal: #8bd5ca;
                 --surface1: #494d64;
+                --crust: #181926;
             }
             html {
                 background-color: var(--base);
                 color: var(--text);
-            }
-            .aubrey {
-                font-family: "Aubrey", system-ui;
-                font-weight: 400;
-                font-style: normal;
+                font-family: "Amarante", sans-serif;
             }
             .caveat {
                 font-family: "Caveat", cursive;
@@ -125,19 +129,28 @@
                 line-height: 25px;
 
                 cursor: pointer;
+                font-family: "Aubrey", sans-serif;
             }
             .today {
                 border: 2px solid var(--rosewater);
-                color: #f5bde6;
+                color: var(--rosewater) !important;
                 margin: 1px;
             }
             .punched {
                 background-color: var(--teal);
-                color: var(--surface1);
+                color: var(--crust);
                 border: 1px solid var(--teal);
+                transition: all .1s ease-in;
+            }
+            .unpunched {
+                color: var(--overlay1);
+                transition: all .1s ease-in;
             }
             .monthHeader {
                 text-align: center;
+                font-size: .8em;
+                margin-left: 2px;
+                margin-right: 2px;
             }
             .punchcard {
                 display: inline-block;
@@ -165,10 +178,8 @@
                 margin-left: 1em;
                 padding-left: .5em;
                 padding-right: .5em;
-                font-family: "Aubrey", system-ui;
-                font-style: normal;
-                font-weight: 400;
-                font-size: 1.5em;
+                font-size: 1.2em;
+                font-family: "Amarante", sans-serif;
             }
             @media only screen and (max-width: 390px) {
                 .punchcard {
@@ -178,16 +189,38 @@
                     margin-left: 0;
                 }
             }
-
+            .newcardbutton {
+                display: inline-block;
+                font-size: 1.2em;
+                background-color: var(--surface1);
+                border: 1px solid var(--text);
+                color: var(--text);
+                font-family: "Amarante", sans-serif;
+            }
+            .headerFormButton {
+                background-color: var(--surface1);
+                border: 1px solid var(--text);
+                font-size: 1em;
+                color: var(--text);
+                font-family: "Amarante", sans-serif;
+                cursor: pointer;
+                margin-top: 5px;
+                margin-right: 2px;
+            }
+            option {
+                font-family: "Amarante", sans-serif;
+            }
         </style>
     </head>
     <body>
-        <select id="yearPicker" onchange="changeYear(this.value)">
-            {% for y in years %}
-                <option value={{y}} {{"selected" if y == year else ""}}>{{y}}</option>
-            {% endfor %}
-            <option value="new">New Punchcard</option>
-        </select>
+        {% if years|length %}
+            <select id="yearPicker" onchange="changeYear(this.value)" class="yearPicker">
+                {% for y in years %}
+                    <option value={{y}} {{"selected" if y == year else ""}}>{{y}}</option>
+                {% endfor %}
+            </select>
+        {% endif %}
+        <button onclick="changeYear('new')" class="newcardbutton">New</button>
         <div>
             {% for punchcard in punchcards %}
                 <div class="punchcard">
@@ -202,13 +235,13 @@
                     </form>
                     <div class="punchgrid">
                         {% for header in punchcard.punches[0] %}
-                        <div class="aubrey monthHeader">{{header}}</div>
+                        <div class="monthHeader">{{header}}</div>
                         {% endfor %}
                         {% for days in punchcard.punches[1:] %}
                             {% for day in days %}
                                 {% if day[0] != -1 %}
                                     <div
-                                        class='aubrey day {{"punched" if day[1] else ""}} {{"today" if loop.index == today.month and day[0] == today.date else ""}}'
+                                        class='day {{"punched" if day[1] else "unpunched"}} {{"today" if loop.index == today.month and day[0] == today.date else ""}}'
                                         onclick='punch(this, "{{url_for("punch_punchcard", id=punchcard.id)}}", {{loop.index}}, {{day[0]}})'
                                             >{{day[0]}}</div>
                                 {% else %}
@@ -218,8 +251,6 @@
                         {% endfor %}
                     </div>
                 </div>
-            {% else %}
-            <button onclick="changeYear('new')">Create new punchcard</button>
             {% endfor %}
         </div>
     </body>
