@@ -18,7 +18,7 @@ version: "3.8"
 services:
   punchcard:
     restart: unless-stopped
-    image: ghcr.io/jmaliksi/punchcard
+    image: ghcr.io/jmaliksi/punchcard:main
     container_name: punchcard
     volumes:
       - /apps/punchcard/data:/app/data
