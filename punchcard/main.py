@@ -26,7 +26,11 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
-security = HTTPBasic()
+
+def auth_noop() -> HTTPBasicCredentials:
+    return HTTPBasicCredentials(username="", password="")
+
+security = HTTPBasic() if (os.environ.get('PUNCHCARD_USERNAME') or os.environ.get('PUNCHCARD_PASSWORD')) else auth_noop
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -133,9 +137,9 @@ class Punchcard:
 
 
 def auth(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    u = os.environ.get('PUNCHCARD_USERNAME')
-    p = os.environ.get('PUNCHCARD_PASSWORD')
-    if not u and not p:
+    u = os.environ.get('PUNCHCARD_USERNAME', '')
+    p = os.environ.get('PUNCHCARD_PASSWORD', '')
+    if not (u or p):
         return True
     username_good = secrets.compare_digest(credentials.username, u)
     pw_good = secrets.compare_digest(credentials.password, p)
