@@ -30,7 +30,12 @@ app = FastAPI(
 def auth_noop() -> HTTPBasicCredentials:
     return HTTPBasicCredentials(username="", password="")
 
-security = HTTPBasic() if (os.environ.get('PUNCHCARD_USERNAME') or os.environ.get('PUNCHCARD_PASSWORD')) else auth_noop
+if os.environ.get('PUNCHCARD_USERNAME') or os.environ.get('PUNCHCARD_PASSWORD'):
+    print('enabling basic auth')
+    security = HTTPBasic()
+else:
+    print('no auth credentials detected')
+    security = auth_noop
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -56,9 +61,11 @@ def db():
         con.close()
 
 
-def bootstrap_db():
+@app.on_event("startup")
+async def bootstrap_db():
     with db() as conn:
-        conn.execute('CREATE TABLE punchcards (id TEXT PRIMARY KEY, year INTEGER NOT NULL, label TEXT, punches TEXT)')
+        conn.execute('CREATE TABLE IF NOT EXISTS punchcards (id TEXT PRIMARY KEY, year INTEGER NOT NULL, label TEXT, punches TEXT)')
+    print('bootstrapped DB')
 
 
 class Punchcard:
@@ -146,7 +153,7 @@ def auth(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     if not (username_good and pw_good):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="bluh",
+            detail="Invalid username or password",
             headers={"WWW-Authenticate": "Basic"},
         )
     return True
@@ -234,10 +241,3 @@ async def update_punchcard(id: str, authed: Annotated[bool, Depends(auth)], upda
 @app.get('/robots.txt', response_class=PlainTextResponse)
 def robots():
     return "User-agent: *\nDisallow: /"
-
-
-if __name__ == "__main__":
-    try:
-        bootstrap_db()
-    except Exception as e:
-        print(e)

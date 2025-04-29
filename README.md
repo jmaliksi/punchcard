@@ -30,4 +30,4 @@ services:
 ```
 
 # Troubleshooting
-If you get a `sqlite3.OperationalError: no such table: punchcards` on service start, this may mean that the database on disc was not created with the correct user permissions. SQLite needs read/write on both the db file **and** its parent folder on the **host machine**. Running chmod 664 on the db file and folder, as well as making sure chown all matches up should resolve the permissions error, and the service will attempt to create the table after a restart.
+If you get a `sqlite3.OperationalError: no such table: punchcards` on service start, this may mean that the database on disc was not created with the correct user permissions. SQLite needs read/write on both the db file **and** its parent folder on the **host machine**. Running `chmod -R u+w` on the db parent folder, as well as making sure chown all matches up should resolve the permissions error, and the service will attempt to create the table after a restart.
