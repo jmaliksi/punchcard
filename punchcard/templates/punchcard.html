@@ -83,6 +83,23 @@
                     });
                 }
             }
+
+            window.onload = () => {
+                if ({{ auto_refresh_timeout }} >= 0) {
+                    sessionStorage.setItem("pageLoadedAt", Date.now());
+                }
+            }
+            window.onfocus = () => {
+                const refreshTimeout = {{ auto_refresh_timeout }};
+                if (refreshTimeout < 0) {
+                    return;
+                }
+                const loadedAt = sessionStorage.getItem("pageLoadedAt");
+                if (!!loadedAt && (Date.now() - loadedAt >= refreshTimeout)) {
+                    sessionStorage.removeItem("pageLoadedAt");
+                    location.reload();
+                }
+            }
         </script>
         <style>
             :root {

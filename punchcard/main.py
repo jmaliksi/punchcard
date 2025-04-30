@@ -174,6 +174,7 @@ async def get_punchcard(request: Request, authed: Annotated[bool, Depends(auth)]
             "month": date.today().month,
             "date": date.today().day,
         },
+        'auto_refresh_timeout': int(os.environ.get('PUNCHCARD_AUTO_REFRESH_TIMEOUT', -1)),
     }
     with db() as conn:
         context['years'] = [row['year'] for row in conn.execute('SELECT distinct(year) FROM punchcards ORDER BY year DESC')]
