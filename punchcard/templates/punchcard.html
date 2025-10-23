@@ -84,6 +84,12 @@
                 }
             }
 
+            function logout() {
+                if (confirm('Logout? You will need to enter your credentials again.')) {
+                    window.location.href = '/logout';
+                }
+            }
+
             window.onload = () => {
                 if ({{ auto_refresh_timeout }} >= 0) {
                     sessionStorage.setItem("pageLoadedAt", Date.now());
@@ -241,6 +247,7 @@
             </select>
         {% endif %}
         <button onclick="changeYear('new')" class="newcardbutton">New</button>
+        <button onclick="logout()" class="newcardbutton" style="margin-left: 10px;">Logout</button>
         <div>
             {% for punchcard in punchcards %}
                 <div class="punchcard">

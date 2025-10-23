@@ -6,11 +6,12 @@ import sqlite3
 import os
 import uuid
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, datetime, timedelta
 from fastapi import Depends, FastAPI, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
+from jose import JWTError, jwt
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -19,9 +20,14 @@ from typing import Annotated, Optional
 
 DATABASE = 'data/db.db'
 
+# JWT Configuration
+SECRET_KEY = os.environ.get('PUNCHCARD_SECRET_KEY', secrets.token_urlsafe(32))
+ALGORITHM = "HS256"
+SESSION_DURATION_DAYS = int(os.environ.get('PUNCHCARD_SESSION_DURATION', 30))
+
 app = FastAPI(
     title='Punchcard',
-    version='0.0.1',
+    version='0.1.0',
     openapi_url=None,
     docs_url=None,
     redoc_url=None,
@@ -45,6 +51,20 @@ app.state.limiter = limiter
 app.add_exception_handler(429, _rate_limit_exceeded_handler)
 
 templates = Jinja2Templates(directory="templates")
+
+
+def create_jwt_token() -> str:
+    expire = datetime.utcnow() + timedelta(days=SESSION_DURATION_DAYS)
+    to_encode = {"exp": expire, "type": "session"}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_jwt_token(token: str) -> bool:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("type") == "session"
+    except JWTError:
+        return False
 
 
 @contextmanager
@@ -143,11 +163,18 @@ class Punchcard:
         }
 
 
-def auth(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def auth(request: Request, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     u = os.environ.get('PUNCHCARD_USERNAME', '')
     p = os.environ.get('PUNCHCARD_PASSWORD', '')
     if not (u or p):
         return True
+
+    # Check for JWT session cookie first
+    session_token = request.cookies.get('punchcard_session')
+    if session_token and verify_jwt_token(session_token):
+        return True
+
+    # Fall back to basic auth
     username_good = secrets.compare_digest(credentials.username, u)
     pw_good = secrets.compare_digest(credentials.password, p)
     if not (username_good and pw_good):
@@ -181,11 +208,25 @@ async def get_punchcard(request: Request, authed: Annotated[bool, Depends(auth)]
         if year == -1 and context['years']:
             year = context['years'][0]
         context['punchcards'] = [Punchcard.load_json(row['punches']).to_template_var() for row in conn.execute('SELECT * FROM punchcards WHERE year=? ORDER BY label', (year,))]
-    return templates.TemplateResponse(
+
+    response = templates.TemplateResponse(
         request=request,
         name='punchcard.html',
         context=context,
     )
+
+    if not request.cookies.get('punchcard_session'):
+        jwt_token = create_jwt_token()
+        response.set_cookie(
+            key='punchcard_session',
+            value=jwt_token,
+            max_age=SESSION_DURATION_DAYS * 24 * 60 * 60,
+            httponly=True,
+            secure=True,
+            samesite='strict'
+        )
+
+    return response
 
 
 class PunchBody(BaseModel):
@@ -237,6 +278,14 @@ async def update_punchcard(id: str, authed: Annotated[bool, Depends(auth)], upda
         pc._label = update.label
     pc.save()
     return {'ok': True}
+
+
+@app.get('/logout')
+async def logout():
+    """Logout endpoint that clears the session cookie."""
+    response = RedirectResponse(url='/punchcard', status_code=302)
+    response.delete_cookie('punchcard_session')
+    return response
 
 
 @app.get('/robots.txt', response_class=PlainTextResponse)

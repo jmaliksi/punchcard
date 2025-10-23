@@ -2,3 +2,4 @@ fastapi==0.115.12
 fastapi-cli==0.0.7
 Jinja2==3.1.6
 slowapi==0.1.9
+python-jose[cryptography]==3.3.0
