@@ -223,7 +223,7 @@ async def get_punchcard(request: Request, authed: Annotated[bool, Depends(auth)]
             max_age=SESSION_DURATION_DAYS * 24 * 60 * 60,
             httponly=True,
             secure=True,
-            samesite='strict'
+            samesite='lax'
         )
 
     return response
