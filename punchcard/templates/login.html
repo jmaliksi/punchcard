@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="robots" content="index, nofollow">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <meta charset="UTF-8">
+        <title>Login - Punchcard</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Aubrey&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="/static/style.css">
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+                padding: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-container">
+            <h1 class="login-title">Punchcard</h1>
+            
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+            
+            <form method="post" action="/login">
+                <div class="form-group">
+                    <label for="username" class="form-label">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        required 
+                        autocomplete="username"
+                        {% if username %}value="{{ username }}"{% endif %}
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        required 
+                        autocomplete="current-password"
+                    >
+                </div>
+                
+                <button type="submit" class="login-button">Login</button>
+            </form>
+            
+            <div class="back-link">
+                <a href="/punchcard">← Back to Punchcard</a>
+            </div>
+        </div>
+    </body>
+</html>

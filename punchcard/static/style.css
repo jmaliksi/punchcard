@@ -1,0 +1,255 @@
+/* Punchcard Shared Styles */
+
+/* CSS Variables - Catppuccin Mocha Theme */
+:root {
+    --base: #24273a;
+    --text: #cad3f5;
+    --subtext1: #b8c0e0;
+    --rosewater: #f4dbd6;
+    --overlay2: #939ab7;
+    --overlay1: #8087a2;
+    --crust: #181926;
+    --lavender: #b7bdf8;
+    --sapphire: #7dc4e4;
+    --mauve: #c6a0f6;
+    --teal: #8bd5ca;
+    --surface1: #494d64;
+    --red: #ed8796;
+}
+
+/* Base Styles */
+html {
+    background-color: var(--base);
+    color: var(--text);
+    font-family: "Amarante", sans-serif;
+}
+
+.caveat {
+    font-family: "Caveat", cursive;
+    font-optical-sizing: auto;
+    font-style: normal;
+}
+
+/* Login Page Styles */
+.login-container {
+    background-color: var(--surface1);
+    padding: 2em;
+    border-radius: 10px;
+    border: 1px solid var(--text);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+}
+
+.login-title {
+    font-family: "Caveat", cursive;
+    font-size: 2.5em;
+    color: var(--mauve);
+    text-align: center;
+    margin-bottom: 1.5em;
+    font-weight: bold;
+}
+
+.form-group {
+    margin-bottom: 1.5em;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5em;
+    color: var(--text);
+    font-size: 1.1em;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75em;
+    border: 1px solid var(--text);
+    border-radius: 5px;
+    background-color: var(--base);
+    color: var(--text);
+    font-family: "Amarante", sans-serif;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--mauve);
+    box-shadow: 0 0 0 2px rgba(198, 160, 246, 0.2);
+}
+
+.login-button {
+    width: 100%;
+    padding: 0.75em;
+    background-color: var(--teal);
+    color: var(--crust);
+    border: none;
+    border-radius: 5px;
+    font-family: "Amarante", sans-serif;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.login-button:hover {
+    background-color: var(--sapphire);
+}
+
+.login-button:active {
+    transform: translateY(1px);
+}
+
+.error-message {
+    background-color: var(--red);
+    color: var(--crust);
+    padding: 0.75em;
+    border-radius: 5px;
+    margin-bottom: 1em;
+    text-align: center;
+    font-weight: bold;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: 1.5em;
+}
+
+.back-link a {
+    color: var(--mauve);
+    text-decoration: none;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+/* Punchcard Page Styles */
+.punchgrid {
+    display: inline-grid;
+    grid-template-columns: auto auto auto auto auto auto auto auto auto auto auto auto;
+}
+
+.punchgrid > div {
+    width: 25px;
+    height: 25px;
+}
+
+.day {
+    border: 1px solid var(--text);
+    margin: 2px;
+    border-radius: 10px;
+    color: var(--overlay1);
+    text-align: center;
+    vertical-align: middle;
+    line-height: 25px;
+    cursor: pointer;
+    font-family: "Aubrey", sans-serif;
+}
+
+.today {
+    border: 2px solid var(--rosewater);
+    color: var(--rosewater) !important;
+    margin: 1px;
+}
+
+.punched {
+    background-color: var(--teal);
+    color: var(--crust);
+    border: 1px solid var(--teal);
+    transition: all .1s ease-in;
+}
+
+.unpunched {
+    color: var(--overlay1);
+    transition: all .1s ease-in;
+}
+
+.monthHeader {
+    text-align: center;
+    font-size: .8em;
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.punchcard {
+    display: inline-block;
+    margin: 1em;
+}
+
+.headerInput {
+    color: var(--mauve);
+    font-size: 2em;
+    font-weight: bold;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+}
+
+.headerInput:focus {
+    background-color: var(--surface1);
+}
+
+.headerButtons {
+    visibility: hidden;
+}
+
+.headerForm:focus-within .headerButtons {
+    visibility: visible;
+}
+
+select {
+    margin-left: 1em;
+    padding-left: .5em;
+    padding-right: .5em;
+    font-size: 1.2em;
+    font-family: "Amarante", sans-serif;
+}
+
+.newcardbutton {
+    display: inline-block;
+    font-size: 1.2em;
+    background-color: var(--surface1);
+    border: 1px solid var(--text);
+    color: var(--text);
+    font-family: "Amarante", sans-serif;
+}
+
+.headerFormButton {
+    background-color: var(--surface1);
+    border: 1px solid var(--text);
+    font-size: 1em;
+    color: var(--text);
+    font-family: "Amarante", sans-serif;
+    cursor: pointer;
+    margin-top: 5px;
+    margin-right: 2px;
+}
+
+option {
+    font-family: "Amarante", sans-serif;
+}
+
+/* Responsive Design */
+@media only screen and (max-width: 480px) {
+    .login-container {
+        padding: 1.5em;
+    }
+    .login-title {
+        font-size: 2em;
+    }
+}
+
+@media only screen and (max-width: 390px) {
+    .punchcard {
+        margin: 0;
+    }
+    select {
+        margin-left: 0;
+    }
+    .punchgrid {
+        margin-bottom: 1.5em;
+    }
+}

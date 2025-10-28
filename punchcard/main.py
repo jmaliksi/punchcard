@@ -7,9 +7,10 @@ import os
 import uuid
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
-from fastapi import Depends, FastAPI, Request, HTTPException, status
+from fastapi import Depends, FastAPI, Request, HTTPException, status, Form
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -27,11 +28,14 @@ SESSION_DURATION_DAYS = int(os.environ.get('PUNCHCARD_SESSION_DURATION', 30))
 
 app = FastAPI(
     title='Punchcard',
-    version='0.1.0',
+    version='2.0.0',
     openapi_url=None,
     docs_url=None,
     redoc_url=None,
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def auth_noop() -> HTTPBasicCredentials:
     return HTTPBasicCredentials(username="", password="")
@@ -174,16 +178,11 @@ def auth(request: Request, credentials: Annotated[HTTPBasicCredentials, Depends(
     if session_token and verify_jwt_token(session_token):
         return True
 
-    # Fall back to basic auth
-    username_good = secrets.compare_digest(credentials.username, u)
-    pw_good = secrets.compare_digest(credentials.password, p)
-    if not (username_good and pw_good):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return True
+    # If no valid session, redirect to login page
+    raise HTTPException(
+        status_code=status.HTTP_302_FOUND,
+        headers={"Location": "/login"}
+    )
 
 
 @app.get('/')
@@ -268,6 +267,11 @@ class UpdatePunchcard(BaseModel):
     label: Optional[str] = None
 
 
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+
+
 @app.put('/punchcard/{id}')
 async def update_punchcard(id: str, authed: Annotated[bool, Depends(auth)], update: UpdatePunchcard):
     # crud more like piece of crud amirite
@@ -280,10 +284,61 @@ async def update_punchcard(id: str, authed: Annotated[bool, Depends(auth)], upda
     return {'ok': True}
 
 
+@app.get('/login', response_class=HTMLResponse)
+async def login_page(request: Request, error: str = None, username: str = None):
+    """Display the login form."""
+    return templates.TemplateResponse(
+        request=request,
+        name='login.html',
+        context={'error': error, 'username': username}
+    )
+
+
+@app.post('/login')
+async def login(
+    request: Request,
+    username: Annotated[str, Form()],
+    password: Annotated[str, Form()]
+):
+    """Process login credentials and set session cookie."""
+    u = os.environ.get('PUNCHCARD_USERNAME', '')
+    p = os.environ.get('PUNCHCARD_PASSWORD', '')
+    
+    # If no credentials are configured, redirect to punchcard
+    if not (u or p):
+        return RedirectResponse(url='/punchcard', status_code=302)
+    
+    # Validate credentials
+    username_good = secrets.compare_digest(username, u)
+    pw_good = secrets.compare_digest(password, p)
+    
+    if not (username_good and pw_good):
+        # Return to login page with error
+        return templates.TemplateResponse(
+            request=request,
+            name='login.html',
+            context={'error': 'Invalid username or password', 'username': username}
+        )
+    
+    # Create JWT token and set cookie
+    jwt_token = create_jwt_token()
+    response = RedirectResponse(url='/punchcard', status_code=302)
+    response.set_cookie(
+        key='punchcard_session',
+        value=jwt_token,
+        max_age=SESSION_DURATION_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=True,
+        samesite='lax'
+    )
+    
+    return response
+
+
 @app.get('/logout')
 async def logout():
     """Logout endpoint that clears the session cookie."""
-    response = RedirectResponse(url='/punchcard', status_code=302)
+    response = RedirectResponse(url='/login', status_code=302)
     response.delete_cookie('punchcard_session')
     return response
 
