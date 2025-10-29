@@ -9,7 +9,6 @@ from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from fastapi import Depends, FastAPI, Request, HTTPException, status, Form
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
@@ -37,15 +36,8 @@ app = FastAPI(
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-def auth_noop() -> HTTPBasicCredentials:
-    return HTTPBasicCredentials(username="", password="")
-
-if os.environ.get('PUNCHCARD_USERNAME') or os.environ.get('PUNCHCARD_PASSWORD'):
-    print('enabling basic auth')
-    security = HTTPBasic()
-else:
-    print('no auth credentials detected')
-    security = auth_noop
+# Check if authentication is required
+AUTH_REQUIRED = bool(os.environ.get('PUNCHCARD_USERNAME') or os.environ.get('PUNCHCARD_PASSWORD'))
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -167,13 +159,12 @@ class Punchcard:
         }
 
 
-def auth(request: Request, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    u = os.environ.get('PUNCHCARD_USERNAME', '')
-    p = os.environ.get('PUNCHCARD_PASSWORD', '')
-    if not (u or p):
+def auth(request: Request):
+    # If no credentials are configured, skip authentication
+    if not AUTH_REQUIRED:
         return True
 
-    # Check for JWT session cookie first
+    # Check for JWT session cookie
     session_token = request.cookies.get('punchcard_session')
     if session_token and verify_jwt_token(session_token):
         return True
