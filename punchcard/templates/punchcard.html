@@ -8,7 +8,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Aubrey&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="/static/style.css">
+        <link rel="stylesheet" href="../static/style.css">
         <script>
             function punch(element, url, month, date) {
                 const punch = !element.classList.contains('punched');
@@ -23,6 +23,9 @@
                 }).then(() => {
                     element.classList.toggle('punched');
                     element.classList.toggle('unpunched');
+                    if (element.classList.contains('today')) {
+                        element.classList.toggle('punched-today');
+                    }
                 })
             }
 
@@ -139,7 +142,7 @@
                             {% for day in days %}
                                 {% if day[0] != -1 %}
                                     <div
-                                        class='day {{"punched" if day[1] else "unpunched"}} {{"today" if loop.index == today.month and day[0] == today.date else ""}}'
+                                        class='day {{"punched" if day[1] else "unpunched"}} {{"today" if loop.index == today.month and day[0] == today.date else ""}} {{"punched-today" if day[1] and loop.index == today.month and day[0] == today.date else ""}}'
                                         onclick='punch(this, "{{url_for("punch_punchcard", id=punchcard.id)}}", {{loop.index}}, {{day[0]}})'
                                             >{{day[0]}}</div>
                                 {% else %}

@@ -166,6 +166,13 @@ html {
     transition: all .1s ease-in;
 }
 
+.punched-today {
+    background-color: var(--teal);
+    border: 2px solid var(--rosewater) !important;
+    color: var(--crust) !important;
+    margin: 1px;
+}
+
 .monthHeader {
     text-align: center;
     font-size: .8em;
